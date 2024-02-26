@@ -1,0 +1,22 @@
+integrations:
+  - name: nri-flex
+    interval: 30s
+    config:
+      name: MySQLDbFlex
+      apis:
+        - database: mysql
+          # connection string for an rds mysql instance. Be sure to use the writer endpoint here.  /sys is the default database. newrelic:Password is the user:pass.
+          db_conn: user:pass@tcp(localhost:3306)/sys              
+          logging:
+            open: true
+          custom_attributes: # applies to all queries
+            mySQLname: "node:localhost:3306"
+          #   host: AuroraMySQL # custom host name atribute
+          db_async: true # process queries async
+          db_queries:
+            - name: MySQLProcessList
+              run: SELECT * FROM performance_schema.processlist # grab all processes from MySQL
+            - name: MySQLStatementHistory
+              run: select * from performance_schema.events_statements_history_long where timer_end/1000000000000 + 30 >= (select VARIABLE_VALUE from performance_schema.global_status where variable_name='UPTIME')
+            - name: MySQLWaitsHistory
+              run: select sum(timer_wait) TIMER_WAIT, sum(spins) SPINS, sum(number_of_bytes) NUMBER_OF_BYTES, EVENT_NAME, SOURCE, OBJECT_SCHEMA, OBJECT_NAME, INDEX_NAME, OBJECT_TYPE, NESTING_EVENT_ID, NESTING_EVENT_TYPE, OPERATION, FLAGS FROM performance_schema.events_waits_history_long WHERE timer_end/1000000000000 + 30 > (SELECT VARIABLE_VALUE FROM performance_schema.global_status WHERE variable_name='UPTIME') GROUP BY event_name, source, object_schema, object_name, index_name, object_type, nesting_event_id, nesting_event_type, operation, flags
